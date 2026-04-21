@@ -53,6 +53,6 @@ def all_task(filter_type):
         cursor.execute(queries.select_task_complited)
     else:
         cursor.execute(queries.select_task_uncomplited)
-    tasks = cursor.fetchall() # получаем всес строчки котоыре есть
+    tasks = cursor.fetchall() 
     conn.close()
     return tasks

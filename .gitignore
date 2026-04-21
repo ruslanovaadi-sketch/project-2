@@ -14,4 +14,4 @@ db/todo.db
 .idea/
 
 # flet
-.flet/
+.flet/ 

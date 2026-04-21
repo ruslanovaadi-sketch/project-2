@@ -1,65 +1,91 @@
-from db import main_db
-import datetime
 import flet as ft
 
+
 def main(page: ft.Page):
+    page.title = "Список покупок"
     page.theme_mode = ft.ThemeMode.LIGHT
 
-    task_list = ft.Column(spacing=25)
-    
-    def view_tasks(task_id, task_text, task_date, complited=None):
-        formatted_date = datetime.datetime.fromisoformat(task_date).strftime("%d.%m.%Y %H:%M")
-        task_field = ft.TextField(value=task_text, read_only=True, expand=True)
-        date_display = ft.Text(formatted_date, color=ft.Colors.GREEN)
+    items = []
 
-        def enable_edit(_):
-            if task_field.read_only == True:
-                task_field.read_only = False
-                save_button.disabled = False
-            else:
-                task_field.read_only = True
+    list_view = ft.Column()
+    counter_text = ft.Text()
 
-        edit_button = ft.IconButton(ft.Icons.EDIT, on_click=enable_edit)
-    
-        def save_task(_):
-            main_db.update_task(task_id=task_id, new_task=task_field.value)
-            id = task_id
-            task = task_field.value
-            task_field.read_only = True
-            save_button.disabled = True
-            print(f"Данные с id - {id}, были изменены на новую задачу - {task}")
+    def refresh_list(filter_type="all"):
+        list_view.controls.clear()
 
-        def del_task(_):
-            main_db.del_task(task_id=task_id)
-            save_button.disabled = True
-            edit_button.disabled = True
-            delete_button.disabled = True
-            task_field.value = "Данные успешно удалены! Все кнопки деактивированы!"
+        bought = 0
 
-        save_button = ft.IconButton(ft.Icons.SAVE, on_click=save_task, disabled=True)
-        delete_button = ft.IconButton(ft.Icons.DELETE, ft.Colors.RED, on_click=del_task)
+        for item in items:
+            name, qty, done = item
 
-        return ft.Row([task_field, date_display, edit_button, save_button, delete_button])
+            if done:
+                bought += 1
 
-    def add_task_db(_):
-        if task_input.value:
-            task_text = task_input.value
-            task_date = datetime.datetime.now().isoformat()
-            new_task_id = main_db.add_task(task_text, task_date)
-            
-            formatted_date = datetime.datetime.fromisoformat(task_date).strftime("%d.%m.%Y %H:%M")
-            print(f"[{formatted_date}] Задача {new_task_id} успешно добавлена! Его id - {new_task_id}")
+            if filter_type == "done" and not done:
+                continue
+            if filter_type == "not_done" and done:
+                continue
 
-            task_list.controls.append(view_tasks(new_task_id, task_text, task_date))
-            task_input.value = ""
+            def toggle_done(e, item=item):
+                items[2] = e.control.value
+                refresh_list(dropdown.value)
 
-    task_input = ft.TextField(label="Введите задачу", expand=True, on_submit=add_task_db)
-    task_add_button = ft.IconButton(ft.Icons.ADD, on_click=add_task_db)
+            def delete_item(e, item=item):
+                items.remove(item)
+                refresh_list(dropdown.value)
 
-    input_row = ft.Row([task_input, task_add_button])
+            list_view.controls.append(
+                ft.Row(
+                    controls=[
+                        ft.Checkbox(value=done, on_change=toggle_done),
+                        ft.Text(f"{name} (x{qty})", expand=True),
+                        ft.IconButton(ft.Icons.DELETE, on_click=delete_item),
+                    ]
+                )
+            )
 
-    page.add(input_row, task_list)
+        counter_text.value = f"Куплено: {bought} / {len(items)}"
+        page.update()
 
-if __name__ == '__main__':
-    main_db.init_db()
-    ft.run(main)
+    def add_item(e):
+        if not name_input.value:
+            return
+
+        qty = int(qty_input.value) if qty_input.value else 1
+        items.append([name_input.value, qty, False])
+
+        name_input.value = ""
+        qty_input.value = "1"
+
+        refresh_list(dropdown.value)
+
+    def filter_changed(e):
+        refresh_list(e.control.value)
+
+    name_input = ft.TextField(label="Товар", expand=True)
+    qty_input = ft.TextField(label="Количество", width=120, value="1")
+
+    add_btn = ft.ElevatedButton("ADD", icon=ft.Icons.ADD, on_click=add_item)
+
+    dropdown = ft.Dropdown(
+        value="all",
+        options=[
+            ft.dropdown.Option("all", "Все"),
+            ft.dropdown.Option("done", "Купленные"),
+            ft.dropdown.Option("not_done", "Непокупленные"),
+        ],
+        on_change=filter_changed,
+        width=200,
+    )
+
+    page.add(
+        ft.Text("Список покупок", size=25),
+        ft.Row([name_input, qty_input, add_btn]),
+        ft.Row([dropdown, counter_text]),
+        list_view,
+    )
+
+    refresh_list()
+
+
+ft.app(target=main)
