@@ -15,8 +15,8 @@ def main(page: ft.Page):
 
         bought = 0
 
-        for item in items:
-            name, qty, done = item
+        for i in range(len(items)):
+            name, qty, done = items[i]
 
             if done:
                 bought += 1
@@ -26,12 +26,12 @@ def main(page: ft.Page):
             if filter_type == "not_done" and done:
                 continue
 
-            def toggle_done(e, item=item):
-                items[2] = e.control.value
+            def toggle_done(e, index=i):
+                items[index][2] = e.control.value
                 refresh_list(dropdown.value)
 
-            def delete_item(e, item=item):
-                items.remove(item)
+            def delete_item(e, index=i):
+                items.pop(index)
                 refresh_list(dropdown.value)
 
             list_view.controls.append(
@@ -62,6 +62,18 @@ def main(page: ft.Page):
     def filter_changed(e):
         refresh_list(e.control.value)
 
+    def clear_completed(e):
+        i = 0
+        while i < len(items):
+            if items[i][2]:
+                items.pop(i)
+            else:
+                i += 1
+
+        refresh_list(dropdown.value)
+
+
+
     name_input = ft.TextField(label="Товар", expand=True)
     qty_input = ft.TextField(label="Количество", width=120, value="1")
 
@@ -78,6 +90,12 @@ def main(page: ft.Page):
         width=200,
     )
 
+    clear_btn = ft.ElevatedButton(
+        "Очистить выполненные",
+        icon=ft.Icons.DELETE_SWEEP,
+        on_click=clear_completed
+    )
+
     page.add(
         ft.Text("Список покупок", size=25),
         ft.Row([name_input, qty_input, add_btn]),
@@ -89,3 +107,5 @@ def main(page: ft.Page):
 
 
 ft.app(target=main)
+
+                    
